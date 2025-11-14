@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+# Validate conventional commit messages
+set -euo pipefail
+
+msg_file=${1:-}
+if [[ -z "${msg_file}" || ! -f "${msg_file}" ]]; then
+  echo "commit-msg: message file not provided or does not exist" >&2
+  exit 1
+fi
+
+# Normalize CRLF -> LF and strip trailing CR for processing
+tmp_msg_file=$(mktemp)
+trap 'rm -f "$tmp_msg_file"' EXIT
+sed -e 's/\r$//' "${msg_file}" >"${tmp_msg_file}"
+
+# Prefer ripgrep (rg) when available; fall back to grep
+if command -v rg >/dev/null 2>&1; then
+  GREP_CMD=rg
+  GREP_EXT_OPT=-P
+else
+  GREP_CMD=grep
+  GREP_EXT_OPT=-E
+fi
+
+# Remove lines starting with #
+"${GREP_CMD}" -v -e '^[[:space:]]*#' "${tmp_msg_file}" > "${msg_file}"
+# Remove lines with [$body], [$footers]
+"${GREP_CMD}" -v -e '^\[[$]body\]$' -e '^\[[$]footers\]$' "${msg_file}" > "${tmp_msg_file}"
+# Remove lines with $type[($scope)][!]: $subject
+"${GREP_CMD}" -v -e '^\$type\(\$scope\)\[!\]: \$subject$' "${tmp_msg_file}" > "${msg_file}"
+
+# Remove lines with [$body], [$footers]
+"${GREP_CMD}" -v -e '^\[[$]body\]$' -e '^\[[$]footers\]$' "${tmp_msg_file}" > "${msg_file}"
+# Remove lines with $type[($scope)][!]: $subject
+"${GREP_CMD}" -v -e '^\$type\(\$scope\)\[!\]: \$subject$' "${tmp_msg_file}" > "${msg_file}"
+
+# Helper: print error and exit
+fail() {
+  echo "commit message validation failed:" >&2
+  printf '  - %s\n' "$@" >&2
+  echo >&2
+  echo "Expected header: <type>(<scope>)!: <subject>" >&2
+  echo "Where:" >&2
+  echo "  - type one of: feat|fix|refactor|fmt|test|docs|build|chore" >&2
+  echo "  - scope (optional) matches ^[A-Za-z0-9/-]+$" >&2
+  echo "  - ! (optional) indicates breaking change and REQUIRES a 'BREAKING CHANGE:' footer" >&2
+  echo "  - subject: 1-50 chars, lowercase start, allowed: [a-z0-9 \-_/():,#+], no trailing ." >&2
+  echo >&2
+  echo "Body (optional): lines wrapped to <= 72 chars." >&2
+  echo "Footers (optional): one trailer per line, e.g. 'BREAKING CHANGE: ...'" >&2
+  echo >&2
+  echo "Examples:" >&2
+  echo "  feat(cli): add terse output flag" >&2
+  echo "  fix: handle empty input without panic" >&2
+  exit 1
+}
+
+# Read non-comment lines
+mapfile -t lines < <("${GREP_CMD}" -v -e '^[[:space:]]*#' "${tmp_msg_file}")
+
+# Find first non-empty line = header
+header=""
+header_idx=-1
+for i in "${!lines[@]}"; do
+  l=${lines[$i]}
+  # trim trailing CR/LF already done; keep leading/trailing spaces as-is
+  if [[ -n "${l//[[:space:]]/}" ]]; then
+    header="$l"
+    header_idx=$i
+    break
+  fi
+done
+
+if [[ $header_idx -lt 0 ]]; then
+  fail "empty commit message"
+fi
+
+# Bypass certain auto-generated messages
+case "$header" in
+  Merge\ *|Revert\ *|fixup!\ *|squash!\ *)
+    exit 0 ;;
+esac
+
+# Reject if raw diffs or patch hunks are embedded (avoid leaking diffs/stack traces)
+if "${GREP_CMD}" ${GREP_EXT_OPT} -q -e '^(diff --git |\+\+\+ |--- |@@ )' -- "${tmp_msg_file}"; then
+  fail "commit message appears to contain a raw diff; remove patch content"
+fi
+
+# Reject internal ignore markers
+if "${GREP_CMD}" ${GREP_EXT_OPT} -q -e '[[:space:]]+-+[[:space:]]+IGNORE[[:space:]]+-+' -- "${tmp_msg_file}"; then
+  fail "commit message contains forbidden internal markers"
+fi
+
+# Validate header shape and extract fields
+type=""; scope=""; bang=""; subject=""
+if [[ "$header" =~ ^([a-z]+)(\(([A-Za-z0-9/-]+)\))?(!)?:[[:space:]]*(.+)$ ]]; then
+  type="${BASH_REMATCH[1]}"
+  scope="${BASH_REMATCH[3]:-}"
+  bang="${BASH_REMATCH[4]:-}"
+  subject="${BASH_REMATCH[5]}"
+else
+  fail "header must match '<type>(<scope>)!: <subject>'"
+fi
+
+# Type whitelist
+case "$type" in
+  feat|fix|refactor|fmt|test|docs|build|chore) ;;
+  *) fail "invalid type '$type'" ;;
+esac
+
+# Scope validation (if present)
+if [[ -n "$scope" && ! "$scope" =~ ^[A-Za-z0-9/-]+$ ]]; then
+  fail "scope '$scope' must match ^[A-Za-z0-9/-]+$"
+fi
+
+# Subject checks
+subject_len=${#subject}
+if (( subject_len < 1 || subject_len > 50 )); then
+  fail "subject must be 1-50 chars (got $subject_len)"
+fi
+if [[ "$subject" =~ \.$ ]]; then
+  fail "subject must not end with a period"
+fi
+if [[ ! "$subject" =~ ^[a-z] ]]; then
+  fail "subject must start with a lowercase letter"
+fi
+if [[ ! "$subject" =~ ^[a-z0-9\ \-_/():,#+]*$ ]]; then
+  fail "subject contains invalid characters; allowed: [a-z0-9 -_/():,#+]"
+fi
+# Additional explicit ban for '!' in subject (must only appear as header bang)
+if [[ "$subject" == *'!'* ]]; then
+  fail "subject contains invalid characters; '!' is not allowed"
+fi
+
+# Identify footer block (trailers) at the end: lines like 'Token: value'
+first_footer_idx=${#lines[@]}
+for (( i=${#lines[@]}-1; i>=0; i-- )); do
+  l="${lines[$i]}"
+  # skip empty trailing lines
+  if [[ -z "${l//[[:space:]]/}" ]]; then
+    continue
+  fi
+  if [[ "$l" =~ ^(BREAKING\ CHANGE|[A-Za-z-]+):\  ]]; then
+    first_footer_idx=$i
+    # keep walking to find the start of footer block
+    continue
+  fi
+  # Once we hit a non-footer, stop
+  break
+done
+
+# Collect footer lines
+declare -a footers
+if (( first_footer_idx < ${#lines[@]} )); then
+  for (( i=first_footer_idx; i<${#lines[@]}; i++ )); do
+    l="${lines[$i]}"
+    if [[ -n "${l//[[:space:]]/}" ]]; then
+      footers+=("$l")
+    fi
+  done
+fi
+
+# If breaking indicated in header, require BREAKING CHANGE footer
+if [[ -n "$bang" ]]; then
+  has_breaking_footer=false
+  for f in "${footers[@]:-}"; do
+    if [[ "$f" =~ ^BREAKING[[:space:]]CHANGE:[[:space:]] ]]; then
+      has_breaking_footer=true
+      break
+    fi
+  done
+  if [[ "$has_breaking_footer" != true ]]; then
+    fail "'!' in header requires a 'BREAKING CHANGE:' footer explaining the change"
+  fi
+fi
+
+# Validate body lines length (<=72), excluding header, blank lines, and footer block
+for (( i=header_idx+1; i<first_footer_idx; i++ )); do
+  l="${lines[$i]}"
+  # skip empty lines
+  if [[ -z "${l//[[:space:]]/}" ]]; then
+    continue
+  fi
+  # length check (count characters, not bytes precisely; acceptable for ascii)
+  if (( ${#l} > 72 )); then
+    fail "body line $((i+1)) exceeds 72 chars"
+  fi
+done
+
+exit 0

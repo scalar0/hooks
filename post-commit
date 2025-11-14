@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export NO_COLOR=1
+export CARGO_TERM_COLOR=never
+
+git update-index -g --verbose
+# cargo nextest --profile="hook" run --workspace --all-targets --all-features
