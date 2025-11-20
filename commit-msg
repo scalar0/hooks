@@ -15,24 +15,23 @@ sed -e 's/\r$//' "${msg_file}" >"${tmp_msg_file}"
 
 # Prefer ripgrep (rg) when available; fall back to grep
 if command -v rg >/dev/null 2>&1; then
-  GREP_CMD=rg
+  GREP=rg
   GREP_EXT_OPT=-P
 else
-  GREP_CMD=grep
+  GREP=grep
   GREP_EXT_OPT=-E
 fi
 
-# Remove lines starting with #
-"${GREP_CMD}" -v -e '^[[:space:]]*#' "${tmp_msg_file}" > "${msg_file}"
-# Remove lines with [$body], [$footers]
-"${GREP_CMD}" -v -e '^\[[$]body\]$' -e '^\[[$]footers\]$' "${msg_file}" > "${tmp_msg_file}"
-# Remove lines with $type[($scope)][!]: $subject
-"${GREP_CMD}" -v -e '^\$type\(\$scope\)\[!\]: \$subject$' "${tmp_msg_file}" > "${msg_file}"
-
-# Remove lines with [$body], [$footers]
-"${GREP_CMD}" -v -e '^\[[$]body\]$' -e '^\[[$]footers\]$' "${tmp_msg_file}" > "${msg_file}"
-# Remove lines with $type[($scope)][!]: $subject
-"${GREP_CMD}" -v -e '^\$type\(\$scope\)\[!\]: \$subject$' "${tmp_msg_file}" > "${msg_file}"
+# Filter metadata markers in a single pass
+filtered_msg_file=$(mktemp)
+trap 'rm -f "$tmp_msg_file" "$filtered_msg_file"' EXIT
+"${GREP}" -v \
+  -e '^[[:space:]]*#' \
+  -e '^\[[$]body\]$' \
+  -e '^\[[$]footers\]$' \
+  -e '^\$type(\(\$scope\))?(!)?:[[:space:]]+\$subject$' \
+  "${tmp_msg_file}" >"${filtered_msg_file}"
+mv "${filtered_msg_file}" "${tmp_msg_file}"
 
 # Helper: print error and exit
 fail() {
@@ -56,7 +55,7 @@ fail() {
 }
 
 # Read non-comment lines
-mapfile -t lines < <("${GREP_CMD}" -v -e '^[[:space:]]*#' "${tmp_msg_file}")
+mapfile -t lines < <("${GREP}" -v -e '^[[:space:]]*#' "${tmp_msg_file}")
 
 # Find first non-empty line = header
 header=""
@@ -82,12 +81,12 @@ case "$header" in
 esac
 
 # Reject if raw diffs or patch hunks are embedded (avoid leaking diffs/stack traces)
-if "${GREP_CMD}" ${GREP_EXT_OPT} -q -e '^(diff --git |\+\+\+ |--- |@@ )' -- "${tmp_msg_file}"; then
+if "${GREP}" ${GREP_EXT_OPT} -q -e '^(diff --git |\+\+\+ |--- |@@ )' -- "${tmp_msg_file}"; then
   fail "commit message appears to contain a raw diff; remove patch content"
 fi
 
 # Reject internal ignore markers
-if "${GREP_CMD}" ${GREP_EXT_OPT} -q -e '[[:space:]]+-+[[:space:]]+IGNORE[[:space:]]+-+' -- "${tmp_msg_file}"; then
+if "${GREP}" ${GREP_EXT_OPT} -q -e '[[:space:]]+-+[[:space:]]+IGNORE[[:space:]]+-+' -- "${tmp_msg_file}"; then
   fail "commit message contains forbidden internal markers"
 fi
 
