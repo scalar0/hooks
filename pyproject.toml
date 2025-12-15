@@ -1,0 +1,9 @@
+[project]
+dependencies    = []
+name            = "git-hooks"
+requires-python = ">=3.10"
+version         = "0.0.0"
+
+[build-system]
+build-backend = "hatchling.build"
+requires      = ["hatchling"]
