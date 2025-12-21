@@ -1,0 +1,16 @@
+source_dir = ".config/hooks/"
+
+[pre-commit]
+parallel = true
+
+[pre-commit.commands.prettier-formating]
+run         = "echo {staged_files} | xargs npx prettier --ignore-unknown --write"
+stage_fixed = true
+
+[pre-commit.commands.prettier-formating.env]
+NO_COLOR = "1"
+
+[pre-commit.commands.ruff-lint-fmt]
+glob        = "*.py"
+run         = "ruff check {staged_files} --fix && ruff format"
+stage_fixed = true
