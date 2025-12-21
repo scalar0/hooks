@@ -1,0 +1,4 @@
+fix              = true
+required-version = ">=0.14.0"
+[analyze]
+detect-string-imports = true
