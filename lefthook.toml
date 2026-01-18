@@ -1,5 +1,8 @@
 source_dir = ".config/hooks/"
 
+[commit-msg.commands.conventional-commit]
+run = "uv run --script .config/hooks/commit_msg/commit_msg.py {1}"
+
 [pre-commit]
 parallel = true
 
@@ -12,5 +15,5 @@ NO_COLOR = "1"
 
 [pre-commit.commands.ruff-lint-fmt]
 glob        = "*.py"
-run         = "ruff check {staged_files} --fix && ruff format"
+run         = "uvx ruff check --fix {staged_files} && uvx ruff format"
 stage_fixed = true

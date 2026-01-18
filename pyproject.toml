@@ -12,5 +12,5 @@ test = ["pytest-cov>=4.1", "pytest>=8.3"]
 build-backend = "hatchling.build"
 requires      = ["hatchling"]
 
-[tool.uv]
-dev-dependencies = ["pytest-cov>=4.1", "pytest>=8.3", "ruff>=0.5.7"]
+[tool.uv.dependency-groups]
+dev = { pytest-cov = ">=4.1", pytest = ">=8.3", ruff = ">=0.5.7" }
