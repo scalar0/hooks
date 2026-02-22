@@ -39,6 +39,11 @@ def test_valid_message_passes(tmp_path: Path) -> None:
     validate_commit_message(path)
 
 
+def test_uppercase_words_in_subject_allowed(tmp_path: Path) -> None:
+    path = write_message(tmp_path, "feat: add API response parser")
+    validate_commit_message(path)
+
+
 def test_invalid_type_rejected(tmp_path: Path) -> None:
     path = write_message(tmp_path, "feature: add thing")
     with pytest.raises(ValidationError) as err:

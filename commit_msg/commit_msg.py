@@ -17,7 +17,7 @@ HEADER_RE = re.compile(r"^([a-z]+)(\(([^)]+)\))?(!)?:\s*(.+)$")
 FOOTER_RE = re.compile(r"^(BREAKING CHANGE|[A-Za-z-]+):\s")
 DIFF_RE = re.compile(r"^(diff --git |\+\+\+ |--- |@@ )", re.MULTILINE)
 IGNORE_MARKER_RE = re.compile(r"\s*-+\s+IGNORE\s*-+", re.MULTILINE)
-INVALID_SUBJECT_CHARS_RE = re.compile(r"^[a-z0-9 \-_/():,#+]*$")
+INVALID_SUBJECT_CHARS_RE = re.compile(r"^[A-Za-z0-9 \-_/():,#+]*$")
 
 
 class ValidationError(Exception):
@@ -53,7 +53,7 @@ def _error_summary(reasons: Sequence[str]) -> str:
             ),
             (
                 "  - subject: 1-50 chars, lowercase start, allowed: "
-                "[a-z0-9 \\ -_/():,#+], no trailing ."
+                "[A-Za-z0-9 \\ -_/():,#+], no trailing ."
             ),
             "",
             "Body (optional): lines wrapped to <= 72 chars.",
@@ -147,7 +147,7 @@ def validate_header(header: str) -> tuple[str, str, str, str]:
         _raise_invalid("subject must start with a lowercase letter")
     if not INVALID_SUBJECT_CHARS_RE.fullmatch(subject):
         _raise_invalid(
-            "subject contains invalid characters; allowed: [a-z0-9 -_/():,#+]"
+            "subject contains invalid characters; allowed: [A-Za-z0-9 -_/():,#+]"
         )
     if "!" in subject:
         _raise_invalid("subject contains invalid characters; '!' is not allowed")
