@@ -2,4 +2,4 @@
 
 source_dir = "."
 
-extends = ["./extensions/fmt.toml", "./extensions/py.toml"]
+extends = ["./extensions/fmt.toml", "./extensions/py.toml", "./extensions/defaults.toml"]
