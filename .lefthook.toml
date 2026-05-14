@@ -1,5 +1,5 @@
 #:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
 
-source_dir = "~/.config/git/hooks"
+source_dir = "."
 
 extends = ["./extensions/fmt.toml", "./extensions/py.toml"]
