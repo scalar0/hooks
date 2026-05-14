@@ -1,7 +1,7 @@
 #:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
 
 [commit-msg.commands.conventional-commit]
-run = "uv run --script ./commit_msg/commit_msg.py {1}"
+run = "uv run --script ~/.config/git/hooks/commit_msg/commit_msg.py {1}"
 
 [pre-commit]
 parallel = true

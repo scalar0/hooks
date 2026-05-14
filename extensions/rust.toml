@@ -43,3 +43,7 @@ run      = 'cargo clean'
 glob     = "*.rs"
 priority = 2
 run      = 'cargo b {f} --workspace'
+
+[pre-merge-commit.commands.require-tests-on-main-merge]
+fail_text = "Workspace tests must pass before merging a local branch into main/master."
+run       = "cargo nextest run --profile=agent --workspace --all-targets --all-features"
