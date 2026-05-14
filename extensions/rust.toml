@@ -1,0 +1,45 @@
+#:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
+
+[templates]
+c = '''
+set -eu pipefail
+crates=$(git diff --name-only --cached | rg -oP '(?<=crates/)[^/]+(?=/src/)' | sort -u)
+if [ -z "$crates" ]; then
+  echo "No staged Rust crate files under crates/, skipping."
+  exit 0
+fi
+'''
+f = "--all-targets --all-features --color=never"
+
+[pre-commit.commands.cargo-clippy-fmt]
+glob = "*.rs"
+priority = 1
+run = '''
+{c}
+cargo fmt --all
+for crate in $crates; do
+  echo "Running clippy for crate: $crate"
+  cargo clippy -p "$crate" {f} --fix --keep-going --allow-dirty -- -D warnings
+done
+'''
+stage_fixed = true
+
+[post-commit.commands.cargo-nextest]
+glob = "*.rs"
+run = '''
+{c}
+for crate in $crates; do
+  echo "Running nextest for crate: $crate"
+  cargo nextest run --profile=ci -p "$crate" {f}
+done
+'''
+
+[pre-push.commands.cargo-clean]
+glob     = "*.rs"
+priority = 1
+run      = 'cargo clean'
+
+[pre-push.commands.cargo-build]
+glob     = "*.rs"
+priority = 2
+run      = 'cargo b {f} --workspace'

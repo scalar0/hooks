@@ -1,0 +1,5 @@
+#:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
+
+[pre-merge-commit.commands.require-tests-on-main-merge]
+fail_text = "Workspace tests must pass before merging a local branch into main/master."
+run       = "cargo nextest run --profile=agent --workspace --all-targets --all-features"

@@ -1,0 +1,7 @@
+#:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
+
+[pre-commit.commands.ruff-lint-fmt]
+glob        = "*.py"
+priority    = 2
+run         = "uvx ruff check {staged_files} --fix && uvx ruff format"
+stage_fixed = true

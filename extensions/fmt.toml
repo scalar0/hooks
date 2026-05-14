@@ -1,19 +1,18 @@
-source_dir = ".config/hooks/"
+#:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
 
 [commit-msg.commands.conventional-commit]
-run = "uv run --script .config/hooks/commit_msg/commit_msg.py {1}"
+run = "uv run --script ./commit_msg/commit_msg.py {1}"
 
 [pre-commit]
 parallel = true
 
 [pre-commit.commands.prettier-formating]
+priority    = 0
 run         = "echo {staged_files} | xargs npx prettier --ignore-unknown --write"
 stage_fixed = true
 
 [pre-commit.commands.prettier-formating.env]
 NO_COLOR = "1"
 
-[pre-commit.commands.ruff-lint-fmt]
-glob        = "*.py"
-run         = "uvx ruff check --fix {staged_files} && uvx ruff format"
-stage_fixed = true
+[post-commit.commands.update-index]
+run = "git update-index -g --verbose --refresh"
