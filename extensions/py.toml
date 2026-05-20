@@ -3,5 +3,5 @@
 [pre-commit.commands.ruff-lint-fmt]
 glob        = "*.py"
 priority    = 2
-run         = "uvx ruff check {staged_files} --fix && uvx ruff format"
+run         = "uvx ruff format && uvx ruff check {staged_files} --fix"
 stage_fixed = true
