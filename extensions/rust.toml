@@ -24,6 +24,10 @@ done
 '''
 stage_fixed = true
 
+[pre-commit.scripts."cargo-deptree.sh"]
+priority = 2
+runner   = "bash"
+
 [post-commit.commands.cargo-nextest]
 glob = "*.rs"
 run = '''
