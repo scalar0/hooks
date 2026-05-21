@@ -2,3 +2,24 @@
 
 no_tty = true
 output = ["meta", "summary", "empty_summary", "success", "failure", "execution", "execution_out", "execution_info", "skips"]
+
+[commit-msg.scripts."main.py"]
+args   = "{1}"
+runner = "uv run --script"
+tags   = ["chore"]
+
+[pre-commit]
+parallel = true
+
+[pre-commit.commands.prettier-formating]
+priority    = 0
+run         = "echo {staged_files} | xargs npx prettier --ignore-unknown --write"
+stage_fixed = true
+tags        = ["fmt"]
+
+[pre-commit.commands.prettier-formating.env]
+NO_COLOR = "1"
+
+[post-commit.commands.update-index]
+run = "git update-index -g --verbose --refresh"
+tags = ["chore"]
