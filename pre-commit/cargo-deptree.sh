@@ -9,9 +9,6 @@ mkdir -p "$root/.cargo"
 
 cargo metadata --format-version 1 --all-features --no-deps \
 | jq -c '
-  def dep_kind:
-    if . == null then "normal" else . end;
-
   . as $meta
   | ($meta.packages
       | map(select(.id as $id | ($meta.workspace_members | index($id))))
@@ -28,7 +25,7 @@ cargo metadata --format-version 1 --all-features --no-deps \
   | {
       source: $pkg.name,
       target: $workspace_by_path[.path],
-      kind: (.kind | dep_kind),
+      kind: .kind,
       target_cfg: (.target // null)
     }
 ' \
@@ -46,9 +43,9 @@ cargo metadata --format-version 1 --all-features --no-deps \
     end;
 
   "digraph \"wanguard-dependencies\" {",
-  "  graph [rankdir=LR, splines=true, overlap=false, pad=0.2];",
-  "  node [shape=box, style=\"rounded,filled\", fillcolor=\"#f8f8f8\", color=\"#b0b0b0\", fontname=\"Helvetica\"];",
-  "  edge [fontname=\"Helvetica\", arrowsize=0.7];",
+  "  graph [rankdir=BT, overlap=false];",
+  "  node [fontname=\"Helvetica\"];",
+  "  edge [fontname=\"Helvetica\"];",
   "",
   (.[] | "  " + (.source | @json) + " -> " + (.target | @json)
     + " [label="
