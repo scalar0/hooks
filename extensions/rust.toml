@@ -11,24 +11,24 @@ fi
 '''
 f = "--all-targets --all-features --color=never"
 
-[pre-commit.commands.cargo-clippy-fmt]
-glob = "*.rs"
-priority = 1
-run = '''
-{c}
-cargo fmt --all
-for crate in $crates; do
-  echo "Running clippy for crate: $crate"
-  cargo clippy -p "$crate" {f} --fix --keep-going --allow-dirty -- -D warnings
-done
-'''
+[pre-commit.commands.cargo-clippy]
+glob        = "*.rs"
+priority    = 1
+run         = 'cargo clippy {f} --workspace --fix --keep-going --allow-dirty -- -D warnings'
 stage_fixed = true
-tags = ["fix"]
+tags        = ["fix"]
+
+[pre-commit.commands.cargo-fmt]
+glob        = "*.rs"
+priority    = 0
+run         = 'cargo fmt --all --verbose'
+stage_fixed = true
+tags        = ["fmt"]
 
 [pre-commit.scripts."cargo-deptree.sh"]
 priority = 2
 runner   = "bash"
-tags        = ["docs"]
+tags     = ["docs"]
 
 [post-commit.commands.cargo-nextest]
 glob = "*.rs"
