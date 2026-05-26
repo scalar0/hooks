@@ -1,9 +1,8 @@
 #:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
 
 [pre-commit.commands.buildifier-lint-fmt]
-glob        = ["*/**/*.bzl", "*/**/*.bazel"]
 priority    = 0
 root        = "."
-run         = "buildifier -lint=fix {staged_files}"
+run         = "buildifier -v -r ."
 stage_fixed = true
 tags        = ["fmt"]
