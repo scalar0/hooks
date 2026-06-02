@@ -1,21 +1,37 @@
 #:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
 
 no_tty = true
-output = ["meta", "summary", "empty_summary", "success", "failure", "execution", "execution_out", "execution_info", "skips"]
+output = [
+  "empty_summary",
+  "execution",
+  "execution_info",
+  "execution_out",
+  "failure",
+  "meta",
+  "skips",
+  "success",
+  "summary",
+]
 
 [commit-msg.scripts."main.py"]
-args   = "{1}"
+args = "{1}"
 runner = "uv run --script"
-tags   = ["chore"]
+tags = ["chore"]
 
 [pre-commit]
 parallel = true
 
 [pre-commit.commands.prettier-formating]
-priority    = 0
-run         = "echo {staged_files} | xargs npx prettier --ignore-unknown --write"
+priority = 0
+run = "echo {staged_files} | xargs npx prettier --ignore-unknown --write"
 stage_fixed = true
-tags        = ["fmt"]
+tags = ["fmt"]
+
+[pre-commit.commands.taplo-formating]
+priority = 0
+run = "taplo fmt *.toml .*.toml **/*.toml"
+stage_fixed = true
+tags = ["fmt"]
 
 [pre-commit.commands.prettier-formating.env]
 NO_COLOR = "1"

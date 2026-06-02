@@ -12,23 +12,23 @@ fi
 f = "--all-targets --all-features --color=never"
 
 [pre-commit.commands.cargo-clippy]
-glob        = "*.rs"
-priority    = 1
-run         = 'cargo clippy {f} --workspace --fix --keep-going --allow-dirty -- -D warnings'
+glob = "*.rs"
+priority = 1
+run = 'cargo clippy {f} --workspace --fix --keep-going --allow-dirty -- -D warnings'
 stage_fixed = true
-tags        = ["fix"]
+tags = ["fix"]
 
 [pre-commit.commands.cargo-fmt]
-glob        = "*.rs"
-priority    = 0
-run         = 'cargo fmt --all --verbose'
+glob = "*.rs"
+priority = 0
+run = 'cargo fmt --all --verbose'
 stage_fixed = true
-tags        = ["fmt"]
+tags = ["fmt"]
 
 [pre-commit.scripts."cargo-deptree.sh"]
 priority = 2
-runner   = "bash"
-tags     = ["docs"]
+runner = "bash"
+tags = ["docs"]
 
 [post-commit.commands.cargo-nextest]
 glob = "*.rs"
@@ -42,18 +42,18 @@ done
 tags = ["test"]
 
 [pre-push.commands.cargo-clean]
-glob     = "*.rs"
+glob = "*.rs"
 priority = 1
-run      = 'cargo clean'
-tags     = ["build"]
+run = 'cargo clean'
+tags = ["build"]
 
 [pre-push.commands.cargo-build]
-glob     = "*.rs"
+glob = "*.rs"
 priority = 2
-run      = 'cargo b {f} --workspace'
-tags     = ["build"]
+run = 'cargo b {f} --workspace'
+tags = ["build"]
 
 [pre-merge-commit.commands.require-tests-on-main-merge]
 fail_text = "Workspace tests must pass before merging a local branch into main/master."
-run       = "cargo nextest run --profile=agent --workspace --all-targets --all-features"
-tags      = ["test"]
+run = "cargo nextest run --profile=agent --workspace --all-targets --all-features"
+tags = ["test"]

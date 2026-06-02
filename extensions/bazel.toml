@@ -1,8 +1,8 @@
 #:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
 
 [pre-commit.commands.buildifier-lint-fmt]
-priority    = 0
-root        = "."
-run         = "buildifier -v -r ."
+priority = 0
+root = "."
+run = "buildifier -v -r ."
 stage_fixed = true
-tags        = ["fmt"]
+tags = ["fmt"]
