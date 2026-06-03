@@ -9,7 +9,7 @@ if [ -z "$crates" ]; then
   exit 0
 fi
 '''
-f = "--all-targets --all-features --color=never"
+f = "--all-targets --color=never"
 
 [pre-commit.commands.cargo-clippy]
 glob = "*.rs"
