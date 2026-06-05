@@ -1,5 +1,6 @@
 #:schema https://raw.githubusercontent.com/evilmartians/lefthook/refs/heads/master/schema.json
 
+glob_matcher = "doublestar"
 no_tty = true
 output = [
   "empty_summary",
@@ -28,8 +29,9 @@ stage_fixed = true
 tags = ["fmt"]
 
 [pre-commit.commands.taplo-formating]
+glob = ["**/*.toml", "**/.*.toml"]
 priority = 0
-run = "taplo fmt *.toml .*.toml **/*.toml"
+run = "taplo fmt {staged_files}"
 stage_fixed = true
 tags = ["fmt"]
 

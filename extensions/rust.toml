@@ -12,16 +12,16 @@ fi
 f = "--all-targets --color=never"
 
 [pre-commit.commands.cargo-clippy]
-glob = "*.rs"
+glob = "**/*.rs"
 priority = 1
 run = 'cargo clippy {f} --workspace --fix --keep-going --allow-dirty -- -D warnings'
 stage_fixed = true
 tags = ["fix"]
 
 [pre-commit.commands.cargo-fmt]
-glob = "*.rs"
+glob = "**/*.rs"
 priority = 0
-run = 'cargo fmt --all --verbose'
+run = 'rustfmt --verbose {staged_files}'
 stage_fixed = true
 tags = ["fmt"]
 
@@ -31,7 +31,7 @@ runner = "bash"
 tags = ["docs"]
 
 [post-commit.commands.cargo-nextest]
-glob = "*.rs"
+glob = "**/*.rs"
 run = '''
 {c}
 for crate in $crates; do
@@ -42,13 +42,13 @@ done
 tags = ["test"]
 
 [pre-push.commands.cargo-clean]
-glob = "*.rs"
+glob = "**/*.rs"
 priority = 1
-run = 'cargo clean'
+run = 'cargo clean --workspace'
 tags = ["build"]
 
 [pre-push.commands.cargo-build]
-glob = "*.rs"
+glob = "**/*.rs"
 priority = 2
 run = 'cargo b {f} --workspace'
 tags = ["build"]
