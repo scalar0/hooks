@@ -25,11 +25,6 @@ run = 'rustfmt --verbose {staged_files}'
 stage_fixed = true
 tags = ["fmt"]
 
-[pre-commit.scripts."cargo-deptree.sh"]
-priority = 2
-runner = "bash"
-tags = ["docs"]
-
 [post-commit.commands.cargo-nextest]
 glob = "**/*.rs"
 run = '''
