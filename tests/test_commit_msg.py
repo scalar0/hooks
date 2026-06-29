@@ -2,29 +2,11 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
+import subprocess
 import textwrap
 from pathlib import Path
 
-import pytest
-
-MODULE_PATH = Path(__file__).resolve().parents[1] / "commit_msg" / "commit_msg.py"
-
-
-def _load_module():
-    spec = importlib.util.spec_from_file_location("commit_msg", MODULE_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Unable to load commit_msg module")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-commit_msg = _load_module()
-ValidationError = commit_msg.ValidationError
-validate_commit_message = commit_msg.validate_commit_message
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "commit-msg" / "main.pl"
 
 
 def write_message(tmp_path: Path, content: str) -> Path:
@@ -34,50 +16,61 @@ def write_message(tmp_path: Path, content: str) -> Path:
     return path
 
 
+def run_hook(path: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["perl", str(SCRIPT_PATH), str(path)],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
 def test_valid_message_passes(tmp_path: Path) -> None:
     path = write_message(tmp_path, "feat: add terse output")
-    validate_commit_message(path)
+    result = run_hook(path)
+    assert result.returncode == 0
+    assert result.stderr == ""
 
 
 def test_uppercase_words_in_subject_allowed(tmp_path: Path) -> None:
     path = write_message(tmp_path, "feat: add API response parser")
-    validate_commit_message(path)
+    assert run_hook(path).returncode == 0
 
 
 def test_invalid_type_rejected(tmp_path: Path) -> None:
     path = write_message(tmp_path, "feature: add thing")
-    with pytest.raises(ValidationError) as err:
-        validate_commit_message(path)
-    assert "invalid type 'feature'" in err.value.reasons[0]
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "invalid type 'feature'" in result.stderr
 
 
 def test_scope_validation(tmp_path: Path) -> None:
     path = write_message(tmp_path, "fix(invalid*scope): update")
-    with pytest.raises(ValidationError) as err:
-        validate_commit_message(path)
-    assert "scope 'invalid*scope' must match" in err.value.reasons[0]
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "scope 'invalid*scope' must match" in result.stderr
 
 
 def test_subject_character_rules(tmp_path: Path) -> None:
     path = write_message(tmp_path, "fix: Invalid subject")
-    with pytest.raises(ValidationError) as err:
-        validate_commit_message(path)
-    assert "subject must start with a lowercase letter" in err.value.reasons[0]
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "subject must start with a lowercase letter" in result.stderr
 
 
 def test_body_line_length_enforced(tmp_path: Path) -> None:
     too_long = "a" * 73
     path = write_message(tmp_path, f"feat: add long body\n\n{too_long}")
-    with pytest.raises(ValidationError) as err:
-        validate_commit_message(path)
-    assert "exceeds 72 chars" in err.value.reasons[0]
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "exceeds 72 chars" in result.stderr
 
 
 def test_requires_breaking_change_footer(tmp_path: Path) -> None:
     path = write_message(tmp_path, "chore!: restructure modules")
-    with pytest.raises(ValidationError) as err:
-        validate_commit_message(path)
-    assert "BREAKING CHANGE" in err.value.reasons[0]
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "BREAKING CHANGE" in result.stderr
 
 
 def test_breaking_change_footer_allows_bang(tmp_path: Path) -> None:
@@ -89,7 +82,7 @@ def test_breaking_change_footer_allows_bang(tmp_path: Path) -> None:
         BREAKING CHANGE: api output shape
         """,
     )
-    validate_commit_message(path)
+    assert run_hook(path).returncode == 0
 
 
 def test_rejects_raw_diffs(tmp_path: Path) -> None:
@@ -102,18 +95,39 @@ def test_rejects_raw_diffs(tmp_path: Path) -> None:
         @@ context
         """,
     )
-    with pytest.raises(ValidationError) as err:
-        validate_commit_message(path)
-    assert "raw diff" in err.value.reasons[0]
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "raw diff" in result.stderr
 
 
 def test_rejects_ignore_marker(tmp_path: Path) -> None:
     path = write_message(tmp_path, "docs: add note\n\n--- IGNORE ---")
-    with pytest.raises(ValidationError) as err:
-        validate_commit_message(path)
-    assert "forbidden internal markers" in err.value.reasons[0]
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "forbidden internal markers" in result.stderr
 
 
 def test_merge_messages_bypass_validation(tmp_path: Path) -> None:
     path = write_message(tmp_path, "Merge branch 'main'")
-    validate_commit_message(path)
+    assert run_hook(path).returncode == 0
+
+
+def test_reports_multiple_diagnostics_at_once(tmp_path: Path) -> None:
+    path = write_message(
+        tmp_path,
+        """
+        feature(bad*scope): Invalid subject!
+
+        bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+        diff --git a/file b/file
+        """,
+    )
+    result = run_hook(path)
+    assert result.returncode == 1
+    assert "invalid type 'feature'" in result.stderr
+    assert "scope 'bad*scope' must match" in result.stderr
+    assert "subject must start with a lowercase letter" in result.stderr
+    assert "'!' is not allowed" in result.stderr
+    assert "body exceeds 72 chars" in result.stderr
+    assert "raw diff" in result.stderr

@@ -14,9 +14,9 @@ output = [
   "summary",
 ]
 
-[commit-msg.scripts."main.py"]
+[commit-msg.scripts."main.pl"]
 args = "{1}"
-runner = "uv run --script"
+runner = "perl"
 tags = ["chore"]
 
 [pre-commit]
